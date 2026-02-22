@@ -62,58 +62,80 @@ export default function Home() {
 
   return (
     <main className="min-h-screen py-8 px-4">
+      <header className="mb-12 border-b border-[#3a3836] pb-6">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="flex items-center gap-4 md:gap-6">
+            <img 
+              src="/assets/eastpower-logo.png" 
+              alt="臺北伊斯特" 
+              className="h-10 md:h-12 w-auto flex-shrink-0"
+              onError={(e) => {
+                (e.target as HTMLImageElement).style.display = 'none';
+              }}
+            />
+            <div className="border-l border-[#3a3836] pl-4 md:pl-6">
+              <h1 className="text-xl md:text-2xl font-bold text-[#FAE7D5] tracking-wide">臺北伊斯特</h1>
+              <p className="text-xs md:text-sm text-[#FAE7D5]/60 mt-0.5">主場賽事回顧</p>
+            </div>
+          </div>
+          <div className="text-left md:text-right">
+            <p className="text-xs text-[#FAE7D5]/50 uppercase tracking-wider">TPVL</p>
+            <p className="text-xs text-[#FAE7D5]/50 mt-0.5">企業排球聯賽</p>
+          </div>
+        </div>
+      </header>
       <div className="container mx-auto">
         {/* Step Indicator */}
         <div className="max-w-2xl mx-auto mb-8">
           <div className="flex items-center justify-center space-x-4">
             <div
               className={`flex items-center ${
-                step === "id-input" ? "text-blue-600" : "text-gray-400"
+                step === "id-input" ? "text-[#D95B1C]" : "text-[#FAE7D5]/50"
               }`}
             >
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center ${
                   step === "id-input"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-600"
+                    ? "bg-[#D95B1C] text-white"
+                    : "bg-[#3a3836] text-[#FAE7D5]/50"
                 }`}
               >
                 1
               </div>
               <span className="ml-2 text-sm font-medium">輸入 ID</span>
             </div>
-            <div className="w-12 h-0.5 bg-gray-300"></div>
+            <div className="w-12 h-0.5 bg-[#3a3836]"></div>
             <div
               className={`flex items-center ${
-                step === "game-selection" ? "text-blue-600" : "text-gray-400"
+                step === "game-selection" ? "text-[#D95B1C]" : "text-[#FAE7D5]/50"
               }`}
             >
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center ${
                   step === "game-selection"
-                    ? "bg-blue-600 text-white"
+                    ? "bg-[#D95B1C] text-white"
                     : step === "stats" || step === "share"
-                    ? "bg-green-500 text-white"
-                    : "bg-gray-200 text-gray-600"
+                    ? "bg-[#D95B1C] text-white"
+                    : "bg-[#3a3836] text-[#FAE7D5]/50"
                 }`}
               >
                 2
               </div>
               <span className="ml-2 text-sm font-medium">選擇比賽</span>
             </div>
-            <div className="w-12 h-0.5 bg-gray-300"></div>
+            <div className="w-12 h-0.5 bg-[#3a3836]"></div>
             <div
               className={`flex items-center ${
                 step === "stats" || step === "share"
-                  ? "text-blue-600"
-                  : "text-gray-400"
+                  ? "text-[#D95B1C]"
+                  : "text-[#FAE7D5]/50"
               }`}
             >
               <div
                 className={`w-8 h-8 rounded-full flex items-center justify-center ${
                   step === "stats" || step === "share"
-                    ? "bg-blue-600 text-white"
-                    : "bg-gray-200 text-gray-600"
+                    ? "bg-[#D95B1C] text-white"
+                    : "bg-[#3a3836] text-[#FAE7D5]/50"
                 }`}
               >
                 3
@@ -126,8 +148,8 @@ export default function Home() {
         {/* Loading State */}
         {loading && (
           <div className="text-center py-12">
-            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-            <p className="mt-4 text-gray-600">載入中...</p>
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-[#D95B1C]"></div>
+            <p className="mt-4 text-[#FAE7D5]/70">載入中...</p>
           </div>
         )}
 
@@ -147,7 +169,7 @@ export default function Home() {
                 <div className="text-center">
                   <button
                     onClick={handleViewShareCard}
-                    className="bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200"
+                    className="bg-[#D95B1C] hover:bg-[#c04f18] text-white font-semibold py-3 px-8 rounded-lg transition-colors duration-200"
                   >
                     生成分享卡片
                   </button>

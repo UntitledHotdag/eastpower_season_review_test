@@ -1,4 +1,5 @@
-import { Game, UserStats } from "@/types";
+import { Game, UserStats, PlayerParticipation } from "@/types";
+import { getGameDetails } from "./gameDetails";
 
 // Simple hash function for deterministic stats
 function hashString(str: string): number {
@@ -29,14 +30,22 @@ function getStatsForGame(gameId: string): {
   };
 }
 
-// Calculate favorite team (most frequently seen)
+// Calculate favorite opponent team (most frequently seen opponent)
 function getFavoriteTeam(games: Game[]): string {
   const teamCounts: Record<string, number> = {};
+  const EASTPOWER = "臺北伊斯特";
   
   games.forEach((game) => {
-    teamCounts[game.homeTeam] = (teamCounts[game.homeTeam] || 0) + 1;
-    teamCounts[game.awayTeam] = (teamCounts[game.awayTeam] || 0) + 1;
+    // Only count opponent teams
+    if (game.homeTeam !== EASTPOWER) {
+      teamCounts[game.homeTeam] = (teamCounts[game.homeTeam] || 0) + 1;
+    }
+    if (game.awayTeam !== EASTPOWER) {
+      teamCounts[game.awayTeam] = (teamCounts[game.awayTeam] || 0) + 1;
+    }
   });
+  
+  if (Object.keys(teamCounts).length === 0) return "";
   
   return Object.entries(teamCounts).reduce((a, b) =>
     teamCounts[a[0]] > teamCounts[b[0]] ? a : b
@@ -52,10 +61,13 @@ export async function getStatsForGames(
   // Phase 2: Fetch from real database
   
   const selectedGames = games.filter((g) => gameIds.includes(g.id));
+  const EASTPOWER = "臺北伊斯特";
   
   if (selectedGames.length === 0) {
     return {
       gamesAttended: 0,
+      gamesWon: 0,
+      totalHoursPlayed: 0,
       totalScores: 0,
       totalSpikes: 0,
       totalMonsterBlocks: 0,
@@ -63,33 +75,105 @@ export async function getStatsForGames(
     };
   }
   
+  // Games won by East Power (best of 5: win when our sets > opponent sets)
+  const gamesWon = selectedGames.filter((game) => {
+    if (game.homeScore == null || game.awayScore == null) return false;
+    return game.isHome ? game.homeScore > game.awayScore : game.awayScore > game.homeScore;
+  }).length;
+  
+  // Total hours played: ~1.5–2h per match; use sets played as proxy (each set ~25–30 min)
+  const totalHoursPlayed = selectedGames.reduce((hours, game) => {
+    const sets = (game.homeScore ?? 0) + (game.awayScore ?? 0) || 5; // default 5 sets if no result
+    return hours + sets * 0.45; // ~27 min per set
+  }, 0);
+  
+  // Calculate player participation and stats from game details
+  const matchNumbers = selectedGames
+    .map(g => g.matchNumber)
+    .filter((num): num is number => num !== undefined);
+  
   let totalScores = 0;
   let totalSpikes = 0;
   let totalMonsterBlocks = 0;
-  const allPlayers = new Set<number>();
+  let playerParticipation: PlayerParticipation[] = [];
+  const uniquePlayerSet = new Set<string>();
   
-  selectedGames.forEach((game) => {
-    const stats = getStatsForGame(game.id);
-    totalScores += stats.scores;
-    totalSpikes += stats.spikes;
-    totalMonsterBlocks += stats.monsterBlocks;
-    
-    // Add players to set (simulate unique players)
-    for (let i = 0; i < stats.players; i++) {
-      allPlayers.add(hashString(`${game.id}-player-${i}`) % 100);
+  if (matchNumbers.length > 0) {
+    try {
+      const gameDetails = await getGameDetails(matchNumbers);
+      
+      // Aggregate player stats across all games - ONLY East Power players
+      const playerMap = new Map<string, PlayerParticipation>();
+      
+      gameDetails.forEach((detail) => {
+        // Only count stats for East Power players
+        detail.players.forEach((player) => {
+          const key = `${player.playerName}-${player.playerNumber}`;
+          uniquePlayerSet.add(key);
+          
+          const existing = playerMap.get(key);
+          
+          if (existing) {
+            existing.gamesPlayed += 1;
+            existing.totalPoints = (existing.totalPoints || 0) + player.totalPoints;
+            existing.totalSpikes = (existing.totalSpikes || 0) + player.attackPoints;
+            existing.totalBlocks = (existing.totalBlocks || 0) + player.blockPoints;
+          } else {
+            playerMap.set(key, {
+              playerName: player.playerName,
+              playerNumber: player.playerNumber,
+              position: player.position,
+              gamesPlayed: 1,
+              totalPoints: player.totalPoints,
+              totalSpikes: player.attackPoints,
+              totalBlocks: player.blockPoints,
+            });
+          }
+          
+          // Accumulate East Power totals
+          totalScores += player.totalPoints;
+          totalSpikes += player.attackPoints;
+          totalMonsterBlocks += player.blockPoints;
+        });
+      });
+      
+      playerParticipation = Array.from(playerMap.values());
+    } catch (error) {
+      console.error("Failed to fetch player participation:", error);
+      // Fallback: use game scores for East Power only
+      selectedGames.forEach((game) => {
+        // Only count East Power's score from the game result
+        if (game.isHome && game.homeScore !== undefined && game.awayScore !== undefined) {
+          // Estimate points per set (average 20-25 points per set)
+          const sets = game.homeScore + game.awayScore;
+          totalScores += sets * 22; // Approximate
+        } else if (!game.isHome && game.awayScore !== undefined && game.homeScore !== undefined) {
+          const sets = game.homeScore + game.awayScore;
+          totalScores += sets * 22;
+        }
+      });
     }
-  });
+  }
   
-  const avgPointsPerGame = Math.round(totalScores / selectedGames.length);
-  const favoriteTeam = getFavoriteTeam(selectedGames);
+  const avgPointsPerGame = selectedGames.length > 0 
+    ? Math.round(totalScores / selectedGames.length) 
+    : 0;
+  
+  // Calculate favorite opponent team
+  const favoriteTeam = getFavoriteTeam(selectedGames.filter(g => 
+    g.homeTeam !== EASTPOWER && g.awayTeam !== EASTPOWER
+  ));
   
   return {
     gamesAttended: selectedGames.length,
+    gamesWon,
+    totalHoursPlayed: Math.round(totalHoursPlayed * 10) / 10, // 1 decimal
     totalScores,
     totalSpikes,
     totalMonsterBlocks,
-    uniquePlayers: allPlayers.size,
+    uniquePlayers: uniquePlayerSet.size,
     avgPointsPerGame,
-    favoriteTeam,
+    favoriteTeam: favoriteTeam !== EASTPOWER ? favoriteTeam : undefined,
+    playerParticipation,
   };
 }

@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "TVL 賽季回顧 | Taiwan Volleyball League Season Review",
-  description: "生成您的台灣企業排球聯賽賽季回顧",
+  title: "臺北伊斯特 主場賽事回顧 | TPVL Season Review",
+  description: "生成您的 TPVL 臺北伊斯特主場賽事回顧",
 };
 
 export default function RootLayout({
@@ -28,7 +28,7 @@ export default function RootLayout({
           rel="stylesheet"
         />
       </head>
-      <body className="antialiased min-h-screen bg-gray-50">
+      <body className="antialiased min-h-screen bg-[#252422] text-[#FAE7D5]">
         {children}
       </body>
     </html>
